@@ -68,7 +68,7 @@ If you want to define the case sensitivity for specific aliases, you can define 
 - `linker-ignore-case` with a list of names that should be matched case insensitive 
 These property names can be changed in the settings.
 
-### Matching mode
+### Matching behavior
 
 #### Suppress multiple matching and matching to real links
 By default, the plugin will suppress several identical virtual link in the same note.
@@ -95,7 +95,7 @@ You can disable links for the current line you are typing.
 > Deactivating the link creation for the current line is recommended when using the plugin with IME (input method editor) for languages like Chinese or Japanese, as the plugin might otherwise interfere with the IME.
 
 
-### Styling of the links
+### Link style
 
 Any created virtual link will be appended with this suffix. This is useful to distinguish between real and virtual links.
 By default, the suffix is "🔗".
@@ -148,6 +148,8 @@ When right-clicking on a virtual link, the following options are available in th
 - **Convert to real link**: Converts the selected virtual link to a real link.
 - **Exclude this file**: Adds the `linker-exclude` tag to the file, preventing it from being matched by the virtual linker.
 - **Include this file**: Adds the `linker-include` tag to the file, ensuring it is matched by the virtual linker.
+- **Exclude this directory**: Adds the directory to the exclude list in the settings.
+- **Include this directory**: Removes the directory from the exclude list in the settings.
 
 ## How to use for development
 

@@ -9,7 +9,7 @@
 		"version": "node version-bump.mjs && git add manifest.json versions.json"
 	},
 	"keywords": [],
-	"author": "Valentin Schröter",
+	"author": "hyrness",
 	"license": "MIT",
 	"devDependencies": {
 		"@codemirror/language": "^6.10.2",

@@ -152,8 +152,8 @@ When right-clicking on a virtual link, the following options are available in th
 ## How to use for development
 
 - Clone this repo (into `your-vault/.obsidian/plugins/`).
-- `yarn` to install dependencies
-- `yarn dev` to start compilation in watch mode.
-- `yarn build` to compile your `main.ts` into `main.js`.
+- `npm install` to install dependencies
+- `npm run dev` to start compilation in watch mode.
+- `npm run build` to compile your `main.ts` into `main.js`.
 
 It is recommended to use the [Hot Reload Plugin](https://github.com/pjeby/hot-reload) for development.

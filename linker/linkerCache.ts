@@ -245,12 +245,14 @@ export class PrefixTree {
             console.error('[VL LC] Error filtering aliases', aliases, e);
         }
 
+        const minLength = this.settings.minimumLinkLength ?? 1;
+
         let names = [file.basename];
         if (aliases && this.settings.includeAliases) {
             names.push(...aliases);
         }
 
-        names = names.filter(PrefixTree.isNoneEmptyString);
+        names = names.filter(PrefixTree.isNoneEmptyString).filter((name) => name.trim().length >= minLength);
 
         let namesWithCaseIgnore = new Array<string>();
         let namesWithCaseMatch = new Array<string>();

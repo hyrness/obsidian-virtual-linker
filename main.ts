@@ -41,6 +41,7 @@ export interface LinkerPluginSettings {
     onlyLinkOnce: boolean;
     excludeLinksToRealLinkedFiles: boolean;
     includeAliases: boolean;
+    minimumLinkLength: number;
     alwaysShowMultipleReferences: boolean;
     // wordBoundaryRegex: string;
     // conversionFormat
@@ -80,6 +81,7 @@ const DEFAULT_SETTINGS: LinkerPluginSettings = {
     onlyLinkOnce: true,
     excludeLinksToRealLinkedFiles: true,
     includeAliases: true,
+    minimumLinkLength: 2,
     alwaysShowMultipleReferences: false,
     // wordBoundaryRegex: '/[\t- !-/:-@\[-`{-~\p{Emoji_Presentation}\p{Extended_Pictographic}]/u',
 };
@@ -650,6 +652,22 @@ class LinkerSettingTab extends PluginSettingTab {
                     // console.log("Include aliases: " + value);
                     await this.plugin.updateSettings({ includeAliases: value });
                 })
+            );
+
+        // Number input for minimum link length
+        new Setting(containerEl)
+            .setName('Minimum link length')
+            .setDesc('Minimum number of characters a note title or alias must have to be linked automatically.')
+            .addText((text) =>
+                text
+                    .setValue(String(this.plugin.settings.minimumLinkLength))
+                    .onChange(async (value) => {
+                        let newValue = parseInt(value, 10);
+                        if (isNaN(newValue) || newValue < 1) {
+                            newValue = 1;
+                        }
+                        await this.plugin.updateSettings({ minimumLinkLength: newValue });
+                    })
             );
 
         if (this.plugin.settings.advancedSettings) {

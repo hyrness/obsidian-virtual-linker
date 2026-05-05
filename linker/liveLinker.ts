@@ -213,6 +213,15 @@ class AutoLinkerPlugin implements PluginValue {
         const dom = view.dom;
         const mappedFile = this.viewUpdateDomToFileMap.get(dom);
 
+        // The excluded-words file is a config file by purpose: linkifying its entries
+        // would race with the parser that turns those entries into exclusions, and would
+        // rewrite the user's exclusion list as soon as they typed a matching filename.
+        const excludedWordsFile = this.settings.excludedWordsFile?.trim();
+        if (excludedWordsFile) {
+            const currentPath = mappedFile?.path ?? this.app.workspace.getActiveFile()?.path;
+            if (currentPath === excludedWordsFile) return builder.finish();
+        }
+
         // Check if the file is inside excluded folders
         const excludedFolders = this.settings.excludedDirectoriesForLinking;
         if (excludedFolders.length > 0) {

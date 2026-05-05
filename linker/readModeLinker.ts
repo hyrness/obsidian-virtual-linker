@@ -53,6 +53,13 @@ export class GlossaryLinker extends MarkdownRenderChild {
             return;
         }
 
+        // The excluded-words file is a config file by purpose: never linkify its contents,
+        // otherwise its own entries (filenames the user wants excluded) would be linked.
+        const excludedWordsFile = this.settings.excludedWordsFile?.trim();
+        if (excludedWordsFile && this.ctx.sourcePath === excludedWordsFile) {
+            return;
+        }
+
         // return;
         const tags = ['p', 'li', 'td', 'th', 'span', 'em', 'strong']; //"div"
         if (this.settings.includeHeaders) {

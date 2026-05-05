@@ -1,0 +1,8 @@
+# Copy this file to `.envrc` and adjust the path to your Obsidian vault.
+# With direnv installed, the variables below are loaded automatically when
+# you `cd` into this directory; otherwise `source .envrc` manually.
+#
+# Used by `npm run build:deploy` to place the built plugin into
+# $OBSIDIAN_VAULT/.obsidian/plugins/auto-real-linker/.
+
+export OBSIDIAN_VAULT="$HOME/Vault"

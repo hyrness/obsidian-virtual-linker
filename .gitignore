@@ -21,3 +21,6 @@ data.json
 
 # Exclude macOS Finder (System Explorer) View States
 .DS_Store
+
+# direnv: local env file (e.g. OBSIDIAN_VAULT). Template is .envrc.example.
+.envrc

@@ -1,6 +1,3 @@
-[![Buy Me a Coffee](https://img.shields.io/badge/donate-Buy%20Me%20a%20Coffee-blue.svg)](https://www.buymeacoffee.com/vschroeter)
-[![PayPal](https://img.shields.io/badge/donate-PayPal-blue.svg)](https://paypal.me/valentinschroeter)
-
 # Obsidian Auto Linker
 
 This plugin automatically inserts wiki (or markdown) links into your notes for text that matches the title or alias of another note in your vault. Linking happens in the background while you type, on a short debounce, so the note text on disk is updated in place — links show up in graph view, backlinks, and reference counting like any hand-written link.
@@ -16,9 +13,6 @@ Features:
 - per-file include / exclude tags, per-directory include / exclude lists
 - case sensitivity rules per file or per alias
 - a vault-relative file (`linker-exclude.md` by default) lists words that should never be auto-linked
-
-Demo (older Virtual Linker UI; the editing experience is otherwise unchanged):
-![Demo](media/LinkerDemo.gif)
 
 ## Installing the plugin
 

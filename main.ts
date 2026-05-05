@@ -1,4 +1,4 @@
-import { App, EditorPosition, MarkdownView, Menu, Plugin, PluginSettingTab, Setting, TAbstractFile, TFile, TFolder } from 'obsidian';
+import { App, EditorPosition, MarkdownView, Menu, Modal, Notice, Plugin, PluginSettingTab, Setting, TAbstractFile, TFile, TFolder } from 'obsidian';
 
 import { liveLinkerPlugin } from './linker/liveLinker';
 import { ExternalUpdateManager, LinkerCache } from 'linker/linkerCache';
@@ -183,6 +183,39 @@ export default class LinkerPlugin extends Plugin {
                     return true;
                 }
                 return false;
+            },
+        });
+
+        this.addCommand({
+            id: 'open-excluded-words-file',
+            name: 'Open Excluded Words File',
+            callback: () => {
+                this.openOrCreateExcludedWordsFile();
+            },
+        });
+
+        this.addCommand({
+            id: 'convert-wiki-links-to-text',
+            name: 'Convert Wiki Links in Current Note to Plain Text…',
+            editorCallback: (editor) => {
+                const text = editor.getValue();
+                const links = findWikiLinks(text);
+                if (links.length === 0) {
+                    new Notice('No wiki links found in the current note.');
+                    return;
+                }
+                new WikiLinkRevertModal(this.app, links, text, (selectedIndices) => {
+                    if (selectedIndices.length === 0) return;
+                    // Apply in reverse offset order so earlier offsets remain valid.
+                    const targets = selectedIndices
+                        .map((i) => links[i])
+                        .sort((a, b) => b.start - a.start);
+                    for (const link of targets) {
+                        const fromPos = editor.offsetToPos(link.start);
+                        const toPos = editor.offsetToPos(link.end);
+                        editor.replaceRange(link.replacement, fromPos, toPos);
+                    }
+                }).open();
             },
         });
 
@@ -618,6 +651,179 @@ export default class LinkerPlugin extends Plugin {
         await this.saveData(this.settings);
         this.updateManager.update();
     }
+}
+
+/**
+ * Modal that lists every wiki link found in the current note and lets the user
+ * pick which to revert to plain text.
+ */
+class WikiLinkRevertModal extends Modal {
+    constructor(
+        app: App,
+        private links: WikiLinkMatch[],
+        private docText: string,
+        private onSubmit: (selectedIndices: number[]) => void,
+    ) {
+        super(app);
+    }
+
+    onOpen() {
+        const { contentEl } = this;
+        contentEl.empty();
+        contentEl.createEl('h3', { text: 'Convert wiki links to plain text' });
+
+        // Group links by their replacement word (the displayed text).
+        const groups = new Map<string, number[]>();
+        this.links.forEach((link, i) => {
+            const arr = groups.get(link.replacement) ?? [];
+            arr.push(i);
+            groups.set(link.replacement, arr);
+        });
+        const words = Array.from(groups.keys()).sort((a, b) => a.localeCompare(b));
+
+        contentEl.createEl('p', {
+            text: `${this.links.length} link(s) across ${words.length} word(s). Choose words to revert:`,
+        });
+
+        // Filter input.
+        const filterWrap = contentEl.createDiv();
+        filterWrap.style.margin = '8px 0';
+        const filterInput = filterWrap.createEl('input', { type: 'text' });
+        filterInput.placeholder = 'Filter words…';
+        filterInput.style.width = '100%';
+        filterInput.style.padding = '4px 8px';
+
+        const checked = new Map<string, boolean>();
+        for (const w of words) checked.set(w, true);
+
+        // Word list.
+        const list = contentEl.createDiv();
+        list.style.maxHeight = '50vh';
+        list.style.overflowY = 'auto';
+        list.style.margin = '8px 0';
+        list.style.borderTop = '1px solid var(--background-modifier-border)';
+        list.style.borderBottom = '1px solid var(--background-modifier-border)';
+
+        const rows = new Map<string, { row: HTMLElement; cb: HTMLInputElement }>();
+        for (const word of words) {
+            const indices = groups.get(word)!;
+            const row = list.createDiv();
+            row.style.display = 'flex';
+            row.style.alignItems = 'center';
+            row.style.gap = '8px';
+            row.style.padding = '4px 2px';
+            row.style.cursor = 'pointer';
+
+            const cb = row.createEl('input', { type: 'checkbox' });
+            cb.checked = true;
+            cb.addEventListener('change', () => checked.set(word, cb.checked));
+
+            const label = row.createSpan();
+            label.style.flex = '1';
+            label.style.whiteSpace = 'nowrap';
+            label.style.overflow = 'hidden';
+            label.style.textOverflow = 'ellipsis';
+            label.createEl('strong', { text: word });
+            const countEl = label.createSpan({ text: `  (${indices.length})` });
+            countEl.style.opacity = '0.6';
+            countEl.style.fontSize = '0.85em';
+
+            // Tooltip: first occurrence's context.
+            const first = this.links[indices[0]];
+            const ctxStart = Math.max(0, first.start - 30);
+            const ctxEnd = Math.min(this.docText.length, first.end + 30);
+            const ctx = this.docText.slice(ctxStart, ctxEnd).replace(/\s+/g, ' ');
+            row.title = `${first.raw}\n…${ctx}…`;
+
+            row.addEventListener('click', (ev) => {
+                if (ev.target === cb) return;
+                cb.checked = !cb.checked;
+                checked.set(word, cb.checked);
+            });
+
+            rows.set(word, { row, cb });
+        }
+
+        const visibleWords = (): string[] =>
+            words.filter((w) => rows.get(w)!.row.style.display !== 'none');
+
+        filterInput.addEventListener('input', () => {
+            const q = filterInput.value.trim().toLowerCase();
+            for (const word of words) {
+                const visible = q.length === 0 || word.toLowerCase().includes(q);
+                rows.get(word)!.row.style.display = visible ? 'flex' : 'none';
+            }
+        });
+
+        // Footer with counts and buttons.
+        const controls = contentEl.createDiv();
+        controls.style.display = 'flex';
+        controls.style.gap = '8px';
+        controls.style.marginTop = '12px';
+        controls.style.justifyContent = 'flex-end';
+        controls.style.flexWrap = 'wrap';
+
+        const setVisible = (value: boolean) => {
+            for (const word of visibleWords()) {
+                checked.set(word, value);
+                rows.get(word)!.cb.checked = value;
+            }
+        };
+
+        controls.createEl('button', { text: 'Select all (visible)' })
+            .addEventListener('click', () => setVisible(true));
+        controls.createEl('button', { text: 'Deselect all (visible)' })
+            .addEventListener('click', () => setVisible(false));
+        controls.createEl('button', { text: 'Cancel' }).addEventListener('click', () => this.close());
+        const okBtn = controls.createEl('button', { text: 'Convert', cls: 'mod-cta' });
+        okBtn.addEventListener('click', () => {
+            const selectedIndices: number[] = [];
+            for (const word of words) {
+                if (checked.get(word)) selectedIndices.push(...groups.get(word)!);
+            }
+            this.close();
+            this.onSubmit(selectedIndices);
+        });
+
+        // Focus the filter for instant typing.
+        setTimeout(() => filterInput.focus(), 0);
+    }
+
+    onClose() {
+        this.contentEl.empty();
+    }
+}
+
+export interface WikiLinkMatch {
+    /** Start offset (inclusive) of the `[[` in the source text. */
+    start: number;
+    /** End offset (exclusive) of the `]]` in the source text. */
+    end: number;
+    /** The full matched substring, e.g. `[[Note|alias]]`. */
+    raw: string;
+    /** The replacement plain text (alias if present, otherwise the inner content). */
+    replacement: string;
+}
+
+/**
+ * Locate wiki-style links `[[xxxx]]` in `text`.
+ * - `[[Note]]` → `Note`
+ * - `[[Note|alias]]` → `alias` (the displayed text wins)
+ * - `[[Note#Heading]]` → `Note#Heading`
+ * - `![[Note]]` (embeds) are skipped.
+ */
+export function findWikiLinks(text: string): WikiLinkMatch[] {
+    const re = /(?<!!)\[\[([^\[\]\n]+)\]\]/g;
+    const out: WikiLinkMatch[] = [];
+    for (const m of text.matchAll(re)) {
+        const start = m.index!;
+        const end = start + m[0].length;
+        const inner = m[1];
+        const pipeIdx = inner.indexOf('|');
+        const replacement = pipeIdx === -1 ? inner : inner.slice(pipeIdx + 1);
+        out.push({ start, end, raw: m[0], replacement });
+    }
+    return out;
 }
 
 /**
